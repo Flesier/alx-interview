@@ -1,52 +1,44 @@
 #!/usr/bin/python3
-"""
-    script that reads stdin line by line and computes metrics
-"""
-from collections import defaultdict
-import signal
+"""Log Parsing"""
 import sys
 
-def print_statistics(total_size, status_codes):
-    print(f"Total file size: File size: {total_size}")
-    for code in sorted(status_codes.keys()):
-        print(f"{code}: {status_codes[code]}")
 
-def process_lines():
-    total_size = 0
-    status_codes = defaultdict(int)
-    line_count = 0
+if __name__ == '__main__':
+    file_size = [0]
+    status_codes = {200: 0, 301: 0, 400: 0, 401: 0,
+                    403: 0, 404: 0, 405: 0, 500: 0}
 
+    def print_status():
+        """ Prints status """
+        print('File size: {}'.format(file_size[0]))
+        for key in sorted(status_codes.keys()):
+            if status_codes[key]:
+                print('{}: {}'.format(key, status_codes[key]))
+
+    def parse_line(line):
+        """ Checks the line for matches """
+        try:
+            line = line[:-1]
+            word = line.split(' ')
+            # If the file size is last parameter on stdout
+            file_size[0] += int(word[-1])
+            # Here the tatus code comes before file size
+            status_code = int(word[-2])
+            # Moves through dictionary of status codes
+            if status_code in status_codes:
+                status_codes[status_code] += 1
+        except BaseException:
+            pass
+
+    linenum = 1
     try:
         for line in sys.stdin:
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Parse the line and extract relevant information
-            parts = line.split()
-            if len(parts) < 7:
-                continue
-            
-            ip_address, _, _, status_code, file_size = parts[0], parts[3], parts[5], parts[6], parts[7]
-            
-            if not status_code.isdigit():
-                continue
-
-            # Update metrics
-            total_size += int(file_size)
-            status_codes[status_code] += 1
-
-            line_count += 1
-
-            # Print statistics every 10 lines
-            if line_count % 10 == 0:
-                print_statistics(total_size, status_codes)
-
+            parse_line(line)
+            """ print after every 10 lines """
+            if linenum % 10 == 0:
+                print_status()
+            linenum += 1
     except KeyboardInterrupt:
-        pass
-
-    # Print final statistics
-    print_statistics(total_size, status_codes)
-
-if __name__ == "__main__":
-    process_lines()
+        print_status()
+        raise
+    print_status()
